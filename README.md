@@ -20,16 +20,17 @@ brew install sdl2 cmake        # macOS
 cmake -S . -B build -DCMAKE_BUILD_TYPE=Release
 cmake --build build -j
 
-./build/x68game_sdl            # graphical (arrows = move, Esc = quit)
+./build/x68game_sdl            # arrows = move, Z / Up = jump, Esc = quit
 ```
 
 ### Headless / CI build (no SDL)
 
-Always built. Runs a scripted input sequence, prints framebuffer hashes used
-for parity checks, and can dump a frame as a PPM image:
+Always built. Runs a scripted input sequence, prints framebuffer and
+audio-event hashes used for parity checks, can dump frames as PPM images
+(`<prefix>_<frame>.ppm`), and can render the audio offline to a WAV:
 
 ```sh
-./build/x68game_headless 180 frame.ppm
+./build/x68game_headless 300 frame out.wav
 ctest --test-dir build         # parity smoke test
 ```
 
@@ -46,6 +47,7 @@ yet — see the status list in DESIGN.md.
 | `src/game/` | Shared game logic (portable, 8.8 fixed-point, no float) |
 | `src/hal/` | Hardware abstraction layer — the only API the game calls |
 | `src/vhw/` | Software X68000 video hardware (renders to a framebuffer) |
+| `src/audio/` | PC software synth backend (placeholder FM/SFX; ymfm later) |
 | `src/plat_sdl/` | PC/Mac backend (SDL2 as a thin media layer) |
 | `src/plat_headless/` | SDL-free backend for CI / parity tests |
 | `src/plat_x68/` | X68000 backend (planned) |

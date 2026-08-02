@@ -64,8 +64,16 @@ void hal_spr(int i, fix8 x, fix8 y, uint16_t attr, int enable);
 uint16_t hal_input(void);   /* current pad state */
 int      hal_vsync(void);   /* present frame, sync to ~60Hz; 0 = quit requested */
 
-/* --- audio (stubbed this milestone, real chips next) --- */
-void hal_ym_key(int ch, int note, int inst);
-void hal_adpcm(int id);
+/* --- audio --- */
+/* Instrument / SFX ids: shared vocabulary between game logic and the backend
+ * synth (PC) or the real YM2151/ADPCM chips (X68000). */
+#define INST_JUMP  0        /* bright FM blip */
+
+#define SFX_STEP   0        /* short footstep click (ADPCM) */
+#define SFX_LAND   1        /* landing thud (ADPCM) */
+
+void hal_ym_key(int ch, int note, int inst);  /* key-on FM note */
+void hal_ym_off(int ch);                       /* key-off */
+void hal_adpcm(int id);                         /* one-shot sampled SFX */
 
 #endif /* HAL_H */

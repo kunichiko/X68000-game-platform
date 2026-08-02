@@ -32,8 +32,8 @@ src/plat_sdl/       PC/Mac backend: SDL2 as a thin media layer (framebuffer
                     texture + input + audio). Rendering is all vhw.
 src/plat_headless/  SDL-free driver for CI / parity checks. Scripted input,
                     framebuffer hashing, PPM dump.
+src/audio/          PC software synth: implements the audio HAL, renders PCM.
 src/plat_x68/       (next) X68000 backend via IOCS/DOS on the real chips.
-src/plat_common/    Shared backend bits (audio stub for now).
 tools/          Aseprite/Tiled → native binary asset converters (planned).
 tests/          Input-replay → state-hash parity tests (planned).
 ```
@@ -64,16 +64,29 @@ deterministic, which enables record-input / replay-and-compare parity testing.
 - **XEiJ (manual, desktop):** confirm real sprite/scroll/palette/YM2151 behaviour
   the headless path can't show. Needs a JRE and user-supplied IPLROM/CGROM.
 
+## Audio
+
+Same "thin media layer, testable logic" split as video. The synth
+(`src/audio/synth.c`) is PC-only backend code (float allowed) that implements
+the audio HAL and renders PCM; SDL just feeds an audio device from it. HAL calls
+push to a lock-free ring (game thread → audio thread) and accumulate a
+deterministic `synth_event_hash()`, so *which* notes/SFX fire on *which* frame is
+parity-checked exactly like the framebuffer. The synth's *timbre* is a
+placeholder (2-op FM + procedural noise SFX); faithful sound is the real YM2151
+on X68000, with ymfm as the drop-in PC upgrade. The headless driver can render
+the audio offline to a WAV (single-threaded, lockstep with the game).
+
 ## Status
 
 - [x] HAL defined; software virtual hardware (BG tilemap + 128 sprites + palette).
-- [x] Shared vertical slice: player sprite walks on tiled ground.
-- [x] Headless backend builds & renders (parity/CI path proven).
-- [x] SDL backend (builds on a machine with SDL2).
-- [ ] Audio: ymfm YM2151 on PC, IOCS on X68000.
+- [x] Platformer vertical slice: gravity, jump, tile collision, camera scroll.
+- [x] Headless backend builds & renders; framebuffer + audio-event parity hashes.
+- [x] SDL backend (video + audio), builds on a machine with SDL2.
+- [x] Audio: placeholder FM/SFX synth on PC; deterministic event stream.
+- [ ] Audio fidelity: ymfm YM2151 on PC, IOCS OPM/ADPCM on X68000.
 - [ ] X68000 backend (elf2x68k) + XEiJ run.
 - [ ] Asset pipeline (Aseprite/Tiled → native binary).
-- [ ] Gameplay: collision, camera scroll, enemies, map transitions, save.
+- [ ] Gameplay: enemies, hazards, map transitions, save.
 
 ## Building
 

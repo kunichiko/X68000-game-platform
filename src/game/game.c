@@ -36,6 +36,10 @@ static fix8     s_px, s_py, s_vx, s_vy;
 static int      s_on_ground, s_face_left;
 static uint16_t s_prev_pad;
 
+/* --- sound state --- */
+#define STEP_PERIOD 14                   /* ticks between footsteps while walking */
+static int s_prev_on_ground, s_step_timer;
+
 /* Pack a 16x16 tile (16 strings of hex nibbles, '.' = 0) into 4bpp and upload. */
 static void load_tile(int id, const char *rows[16])
 {
@@ -122,6 +126,7 @@ void game_init(void)
     s_px = FIX8(32);  s_py = FIX8(12 * 16);
     s_vx = s_vy = 0;
     s_on_ground = 0; s_face_left = 0; s_prev_pad = 0;
+    s_prev_on_ground = 1; s_step_timer = 0;
 }
 
 /* Move on X, then resolve against the tilemap. */
@@ -181,12 +186,24 @@ void game_step(uint16_t pad)
     if (s_vx < -WALK_MAX) s_vx = -WALK_MAX;
 
     /* --- jump / gravity --- */
-    if (s_on_ground && (pressed & (PAD_A | PAD_UP))) s_vy = JUMP_VY;
+    if (s_on_ground && (pressed & (PAD_A | PAD_UP))) {
+        s_vy = JUMP_VY;
+        hal_ym_key(0, 72, INST_JUMP);
+    }
     s_vy += GRAVITY;
     if (s_vy > MAX_FALL) s_vy = MAX_FALL;
 
     move_x();
     move_y();
+
+    /* --- sound: footsteps while walking, thud on landing --- */
+    if (s_on_ground && (s_vx > FRICTION || s_vx < -FRICTION)) {
+        if (--s_step_timer <= 0) { hal_adpcm(SFX_STEP); s_step_timer = STEP_PERIOD; }
+    } else {
+        s_step_timer = 0;
+    }
+    if (s_on_ground && !s_prev_on_ground) hal_adpcm(SFX_LAND);
+    s_prev_on_ground = s_on_ground;
 
     /* --- camera: centre on player, clamp to the level --- */
     int cam = FIX8_TO_INT(s_px) + HB_W / 2 - VHW_SCREEN_W / 2;

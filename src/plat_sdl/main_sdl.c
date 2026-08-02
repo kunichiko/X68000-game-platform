@@ -8,6 +8,7 @@
  */
 #include "game.h"
 #include "vhw.h"
+#include "synth.h"
 #include <SDL.h>
 #include <stdio.h>
 
@@ -48,13 +49,27 @@ int hal_vsync(void)
     return !g_quit;
 }
 
+static void audio_cb(void *user, Uint8 *stream, int len)
+{
+    (void)user;
+    synth_render((int16_t *)stream, len / (int)sizeof(int16_t));
+}
+
 int main(int argc, char **argv)
 {
     (void)argc; (void)argv;
-    if (SDL_Init(SDL_INIT_VIDEO) != 0) {
+    if (SDL_Init(SDL_INIT_VIDEO | SDL_INIT_AUDIO) != 0) {
         fprintf(stderr, "SDL_Init: %s\n", SDL_GetError());
         return 1;
     }
+
+    SDL_AudioSpec want, have;
+    SDL_memset(&want, 0, sizeof(want));
+    want.freq = SYNTH_SR; want.format = AUDIO_S16SYS; want.channels = 1;
+    want.samples = 1024;  want.callback = audio_cb;
+    SDL_AudioDeviceID audio = SDL_OpenAudioDevice(NULL, 0, &want, &have, 0);
+    if (audio) SDL_PauseAudioDevice(audio, 0);
+    else fprintf(stderr, "audio disabled: %s\n", SDL_GetError());
     g_win = SDL_CreateWindow("X68000 game (SDL)",
                              SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED,
                              VHW_SCREEN_W * SCALE, VHW_SCREEN_H * SCALE, 0);
@@ -71,6 +86,7 @@ int main(int argc, char **argv)
         if (!hal_vsync()) break;
     }
 
+    if (audio) SDL_CloseAudioDevice(audio);
     SDL_DestroyTexture(g_tex);
     SDL_DestroyRenderer(g_ren);
     SDL_DestroyWindow(g_win);
